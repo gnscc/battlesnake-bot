@@ -13,6 +13,9 @@
 import random
 import typing
 
+from pathfinding.core.diagonal_movement import DiagonalMovement
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
 
 # info is called when you create your Battlesnake on play.battlesnake.com
 # and controls your Battlesnake's appearance
@@ -43,34 +46,45 @@ def end(game_state: typing.Dict):
 # Valid moves are 'up', 'down', 'left', or 'right'
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
+    game_state_to_standard_coords(game_state)
+
+    matrix_row = [1 for _ in range(game_state['board']['width'])]
+    matrix_map = [matrix_row.copy() for _ in range(game_state['board']['height'])]
 
     snake = game_state['you']['body']
-    head = snake[0]
+    for segment in snake:
+        matrix_map[segment['y']][segment['x']] = 0
+    
+    food = game_state['board']['food']
 
-    possible_next_moves = {}
-    for next_move in ['up', 'down', 'left', 'right']:
-        
-        possible_next_moves[next_move] = compute_next_coords(head, next_move)
+    for row in matrix_map:
+        print(row)
 
-    # Delete all movements that will collide with the snake
-    possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(snake, coords)}
+    grid = Grid(matrix=matrix_map)
+    start = grid.node(snake[0]['x'], snake[0]['y'])
+    finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
 
-    # Delete all movements that will hit the wall
-    possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_wall(game_state, coords)}
+    closest_path = None
+    closest_distance = None
+    for food in game_state['board']['food']:
+        end = grid.node(food['x'], food['y'])
 
-    next_move = 'left'
-    closest_food_at = 100000
-    for possible_next_move in possible_next_moves:
-        possible_next_move_coords = possible_next_moves[possible_next_move]
+        path, runs = finder.find_path(start, end, grid)
 
-        for food in game_state['board']['food']:
-            food_distance = abs(possible_next_move_coords['x'] - food['x']) + abs(possible_next_move_coords['y'] - food['y'])
-            if food_distance < closest_food_at:
-                next_move = possible_next_move
-                closest_food_at = food_distance
-            elif food_distance == closest_food_at:
-                next_move = random.choice([next_move, possible_next_move]) # Randomize between the two']
+        print(snake[0], food, path)
 
+        if not len(path):
+            continue
+
+        if closest_distance is None or len(path) < closest_distance:
+            closest_distance = len(path)
+            closest_path = path
+
+    next_point = snake[0]
+    if closest_path is not None:
+        next_point = {'x': closest_path[1][0], 'y': closest_path[1][1]}
+
+    next_move = get_next_move(snake[0], next_point)
     print(f'MOVE {game_state["turn"]}: {next_move}')
     return {'move': next_move}
 
@@ -106,6 +120,30 @@ def is_wall(game_state: typing.Dict, coords: typing.Dict) -> bool:
         return True
 
     return False
+
+def get_next_move(origin_point : typing.Dict, target_point : typing.Dict) -> str:
+    origin_x = origin_point['x']
+    origin_y = origin_point['y']
+
+    target_x = target_point['x']
+    target_y = target_point['y']
+
+    if origin_x > target_x:
+        return 'left'
+    elif origin_x < target_x:
+        return 'right'
+    elif origin_y > target_y:
+        return 'up'
+    else:
+        return 'down'
+    
+def game_state_to_standard_coords(game_state: typing.Dict) -> typing.List:
+    game_height = game_state['board']['height']
+    for food in game_state['board']['food']:
+        food['y'] = game_height - food['y'] - 1
+    
+    for segment in game_state['you']['body']:
+        segment['y'] = game_height - segment['y'] - 1
 
 # Start server when `python main.py` is run
 if __name__ == '__main__':
