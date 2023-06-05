@@ -2,9 +2,11 @@ import logging
 import os
 import typing
 
+from dotenv import load_dotenv
 from flask import Flask
 from flask import request
 
+load_dotenv()
 
 def run_server(handlers: typing.Dict):
     app = Flask("Battlesnake")
