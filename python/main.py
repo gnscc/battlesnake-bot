@@ -108,7 +108,7 @@ def old_alg(game_state) -> str:
 
     # Delete all movements that will collide with rival snakes
     for rival_snake in game_state['board']['snakes']:
-        possible_next_move = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(rival_snake, coords)}
+        possible_next_move = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(rival_snake['body'], coords)}
 
     # Delete all movements that will hit the wall
     possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_wall(game_state, coords)}
@@ -183,6 +183,10 @@ def game_state_to_standard_coords(game_state: typing.Dict) -> typing.List:
     
     for segment in game_state['you']['body']:
         segment['y'] = game_height - segment['y'] - 1
+
+    for rival_snake in game_state['board']['snakes']:
+        for segment in rival_snake['body']:
+            segment['y'] = game_height - segment['y'] - 1
 
 # Start server when `python main.py` is run
 if __name__ == '__main__':
