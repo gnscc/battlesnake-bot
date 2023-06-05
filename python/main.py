@@ -57,8 +57,9 @@ def move(game_state: typing.Dict) -> typing.Dict:
     
     food = game_state['board']['food']
 
-    for row in matrix_map:
-        print(row)
+    # Debug
+    # for row in matrix_map:
+    #     print(row)
 
     grid = Grid(matrix=matrix_map)
     start = grid.node(snake[0]['x'], snake[0]['y'])
@@ -71,8 +72,6 @@ def move(game_state: typing.Dict) -> typing.Dict:
 
         path, runs = finder.find_path(start, end, grid)
 
-        print(snake[0], food, path)
-
         if not len(path):
             continue
 
@@ -80,23 +79,55 @@ def move(game_state: typing.Dict) -> typing.Dict:
             closest_distance = len(path)
             closest_path = path
 
-    next_point = snake[0]
-    if closest_path is not None:
+    if closest_path is not None: # Found an optimal path
         next_point = {'x': closest_path[1][0], 'y': closest_path[1][1]}
-
-    next_move = get_next_move(snake[0], next_point)
+        next_move = get_next_move(snake[0], next_point)
+    else: # Find a move that doesn't kill you
+        print('No path found to food')
+        print('Find a way that does not kill you')
+        next_move = old_alg(game_state)
+    
     print(f'MOVE {game_state["turn"]}: {next_move}')
     return {'move': next_move}
 
+def old_alg(game_state) -> str:
+    snake = game_state['you']['body']
+    head = snake[0]
+
+    possible_next_moves = {}
+    for next_move in ['up', 'down', 'left', 'right']:
+        
+        possible_next_moves[next_move] = compute_next_coords(head, next_move)
+
+    # Delete all movements that will collide with the snake
+    possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(snake, coords)}
+
+    # Delete all movements that will hit the wall
+    possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_wall(game_state, coords)}
+
+    next_move = 'left'
+    closest_food_at = 100000
+    for possible_next_move in possible_next_moves:
+        possible_next_move_coords = possible_next_moves[possible_next_move]
+
+        for food in game_state['board']['food']:
+            food_distance = abs(possible_next_move_coords['x'] - food['x']) + abs(possible_next_move_coords['y'] - food['y'])
+            if food_distance < closest_food_at:
+                next_move = possible_next_move
+                closest_food_at = food_distance
+            elif food_distance == closest_food_at:
+                next_move = random.choice([next_move, possible_next_move]) # Randomize between the two
+    
+    return next_move
 
 def compute_next_coords(current_coords: typing.Dict, move: str) -> typing.Dict:
     x = current_coords['x']
     y = current_coords['y']
 
     if move == 'up':
-        y += 1
-    elif move == 'down':
         y -= 1
+    elif move == 'down':
+        y += 1
     elif move == 'left':
         x -= 1
     elif move == 'right':
