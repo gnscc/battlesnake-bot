@@ -54,6 +54,10 @@ def move(game_state: typing.Dict) -> typing.Dict:
     snake = game_state['you']['body']
     for segment in snake:
         matrix_map[segment['y']][segment['x']] = 0
+
+    for rival_snake in game_state['board']['snakes']:
+        for segment in rival_snake['body']:
+            matrix_map[segment['y']][segment['x']] = 0
     
     food = game_state['board']['food']
 
@@ -101,6 +105,10 @@ def old_alg(game_state) -> str:
 
     # Delete all movements that will collide with the snake
     possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(snake, coords)}
+
+    # Delete all movements that will collide with rival snakes
+    for rival_snake in game_state['board']['snakes']:
+        possible_next_move = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_collision(rival_snake, coords)}
 
     # Delete all movements that will hit the wall
     possible_next_moves = {next_move: coords for next_move, coords in possible_next_moves.items() if not is_wall(game_state, coords)}
