@@ -1,4 +1,5 @@
 import subprocess
+import time
 
 import config as cfg
 
@@ -15,6 +16,7 @@ if cfg.BROWSER:
     command += ['--browser']
 
 for i in range(cfg.N_GAMES):
+    time.sleep(cfg.TIME_BETWEEN_GAMES)
 
     subprocess.call(command)
     print("Game {} done.".format(i + 1))

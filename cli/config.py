@@ -9,3 +9,4 @@ SNAKES = [
 W = 11
 H = 11
 BROWSER = False
+TIME_BETWEEN_GAMES = 0.5
