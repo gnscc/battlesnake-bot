@@ -1,11 +1,15 @@
 import typing as typ
+from collections import deque
 import numpy as np
+
+MAX_MEMORY = 100_000
 
 class Agent:
     def __init__(self) -> None:
         self._n_games = 0
         self._last_state = None
         self._last_move = None
+        self.memory = deque(maxlen=MAX_MEMORY) # popleft()
 
     def info() -> typ.Dict:
         print('INFO')
@@ -27,15 +31,17 @@ class Agent:
         self._parse_game_coords_into_standard_coords(game)
         current_state = self._get_state(game)
 
-        if self._last_move is not None and self._last_state is not None: # We sould learn
-            pass
-
+        if self._last_move is not None and self._last_state is not None: # We should learn
+            reward = 0 # get reward
+            self._train_short_memory(reward, current_state)
+            self._remember(reward, current_state)
         next_move = self._get_action()
 
         return {'move': next_move}
     
     def end(self, game : typ.Dict):
         print('END')
+        self._train_long_memory()
 
     def _parse_game_coords_into_standard_coords(self, game : typ.Dict) -> None:
         '''
@@ -102,10 +108,10 @@ class Agent:
     def _get_action():
         pass
 
-    def _remember():
-        pass
+    def _remember(self, reward, next_state):
+        self.memory((self._last_state, self._last_move, reward, next_state))
 
-    def _train_short_memory():
+    def _train_short_memory(self, reward, next_state):
         pass
 
     def _train_long_memory():
