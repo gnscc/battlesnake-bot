@@ -9,7 +9,7 @@ class Agent:
         self._n_games = 0
         self._last_state = None
         self._last_move = None
-        self.memory = deque(maxlen=MAX_MEMORY) # popleft()
+        self._memory = deque(maxlen=MAX_MEMORY) # popleft()
 
     def info() -> typ.Dict:
         print('INFO')
@@ -109,7 +109,7 @@ class Agent:
         pass
 
     def _remember(self, reward, next_state):
-        self.memory((self._last_state, self._last_move, reward, next_state))
+        self._memory((self._last_state, self._last_move, reward, next_state))
 
     def _train_short_memory(self, reward, next_state):
         pass
