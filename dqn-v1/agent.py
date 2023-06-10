@@ -1,8 +1,10 @@
 import typing as typ
 from collections import deque
 import numpy as np
+import random
 
 MAX_MEMORY = 100_000
+BATCH_SIZE = 1000
 
 class Agent:
     def __init__(self) -> None:
@@ -32,15 +34,26 @@ class Agent:
         current_state = self._get_state(game)
 
         if self._last_move is not None and self._last_state is not None: # We should learn
-            reward = 0 # get reward
-            self._train_short_memory(reward, current_state)
-            self._remember(reward, current_state)
+            reward = self._get_reward(current_state)
+            self._train_short_memory(self._last_state, self._last_move, reward, current_state)
+            self._remember(self._last_state, self._last_move, reward, current_state)
+        
         next_move = self._get_action()
+        self._last_state = current_state
+        self._last_move = next_move
 
         return {'move': next_move}
     
     def end(self, game : typ.Dict):
         print('END')
+        self._parse_game_coords_into_standard_coords(game)
+        current_state = self._get_state(game)
+
+        if self._last_move is not None and self._last_state is not None: # We should learn
+            reward = -10 #self._get_reward(current_state)
+            self._train_short_memory(self._last_state, self._last_move, reward, current_state)
+            self._remember(self._last_state, self._last_move, reward, current_state)
+
         self._train_long_memory()
 
     def _parse_game_coords_into_standard_coords(self, game : typ.Dict) -> None:
@@ -105,17 +118,61 @@ class Agent:
 
         return state
     
-    def _get_action():
+    def _get_reward(self, game : typ.Dict, current_state : np.ndarray) -> int:
+        '''
+        We will give a reward of 10 if we eat a food, and -1 if we don't.
+
+        Parameters
+        ----------
+        game : dict
+            The game dictionary.
+        current_state : np.ndarray
+            The current state.
+
+        Returns
+        -------
+        int
+            The reward.
+        '''
+        
+        head = game['you']['body'][0]
+        if self._last_state[head['y'], head['x'], 2] == 1:
+            return 10
+        
+        return -1
+    
+    def _get_action(self):
         pass
 
-    def _remember(self, reward, next_state):
-        self._memory((self._last_state, self._last_move, reward, next_state))
+    def _remember(self, state : np.ndarray, action : int, reward : int, next_state : np.ndarray) -> None:
+        '''
+        Append states and rewards to memory to be able to retrain the model.
 
-    def _train_short_memory(self, reward, next_state):
+        Parameters
+        ----------
+        state : np.ndarray
+            The state.
+        action : int
+            The action.
+        reward : int
+            The reward.
+        next_state : np.ndarray
+            The next state.
+        '''
+
+        self._memory.append((state, action, reward, next_state))
+
+    def _train_short_memory(self, state : np.ndarray, action : int, reward : int, next_state : np.ndarray):
         pass
 
-    def _train_long_memory():
-        pass
+    def _train_long_memory(self):
+        if len(self._memory) > BATCH_SIZE:
+            mini_sample = random.sample(self._memory, BATCH_SIZE) # list of tuples
+        else:
+            mini_sample = self._memory
+
+        states, actions, rewards, next_states = zip(*mini_sample)
+        self._train_short_memory(states, actions, rewards, next_states)
 
 # Start server when `python agent.py` is run
 if __name__ == '__main__':
