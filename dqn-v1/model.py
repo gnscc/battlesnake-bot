@@ -8,11 +8,11 @@ import torch
 class CNN_QNet(torch.nn.Module):
     def __init__(self, input_shape, n_classes):
         super(CNN_QNet, self).__init__()
-        self.conv1 = torch.nn.Conv2d(input_shape[2], 32, kernel_size=3, stride=0)
-        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=0)
-        self.conv3 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=0)
+        self.conv1 = torch.nn.Conv2d(input_shape[2], 32, kernel_size=3, padding=1)
+        self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv3 = torch.nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.flatten = torch.nn.Flatten()
-        self.fc1 = torch.nn.Linear((input_shape[0] - 3) * (input_shape[1] - 3) * 64, 512)
+        self.fc1 = torch.nn.Linear(input_shape[0] * input_shape[1] * 64, 512)
         self.fc2 = torch.nn.Linear(512, n_classes)
 
     def forward(self, x):
