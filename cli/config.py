@@ -1,6 +1,6 @@
-N_GAMES = 10
+N_GAMES = 1
 SNAKES = [
-    ('Snake 1', 'http://localhost:8765')#,
+    ('Snake 1', 'http://localhost:8000')#,
     # ('Snake 2', 'localhost:8766'),
     # ('Snake 3', 'localhost:8767'),
     # ('Snake 4', 'localhost:8768'),
