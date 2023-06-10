@@ -1,17 +1,19 @@
 import os
+import typing as typ
 
 import numpy as np
 import torch
 
+
 class CNN_QNet(torch.nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, n_classes):
         super(CNN_QNet, self).__init__()
         self.conv1 = torch.nn.Conv2d(input_shape[2], 32, kernel_size=3, stride=0)
         self.conv2 = torch.nn.Conv2d(32, 64, kernel_size=3, stride=0)
         self.conv3 = torch.nn.Conv2d(64, 64, kernel_size=3, stride=0)
         self.flatten = torch.nn.Flatten()
         self.fc1 = torch.nn.Linear((input_shape[0] - 3) * (input_shape[1] - 3) * 64, 512)
-        self.fc2 = torch.nn.Linear(512, 4)
+        self.fc2 = torch.nn.Linear(512, n_classes)
 
     def forward(self, x):
         x = torch.nn.functional.relu(self.conv1(x))
@@ -36,19 +38,21 @@ class QTrainer:
         self.optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
         self.criterion = torch.nn.MSELoss()
 
-    def train_step(self, state : np.ndarray, action : np.ndarray, reward : np.ndarray, next_state : np.ndarray, done : np.ndarray):
+    def train_step(self, state : np.ndarray, action : np.ndarray, reward : typ.Union[int, np.ndarray], next_state : np.ndarray, done : typ.Union[bool, np.ndarray]):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
         action = torch.tensor(action, dtype=torch.long)
         reward = torch.tensor(reward, dtype=torch.float)
+        done = torch.tensor(done, dtype=torch.bool)
         # # (n, x)
 
-        # if len(state.shape) == 1:
-        #     # (1, x)
-        #     state = torch.unsqueeze(state, 0)
-        #     next_state = torch.unsqueeze(next_state, 0)
-        #     action = torch.unsqueeze(action, 0)
-        #     reward = torch.unsqueeze(reward, 0)
+        if len(state.shape) == 3:
+            # (1, x)
+            state = torch.unsqueeze(state, 0)
+            next_state = torch.unsqueeze(next_state, 0)
+            action = torch.unsqueeze(action, 0)
+            reward = torch.unsqueeze(reward, 0)
+            done = torch.unsqueeze(done, 0)
 
         # 1: predicted Q values with current state
         pred = self.model(state.cuda())

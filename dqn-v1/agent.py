@@ -1,7 +1,10 @@
+import random
 import typing as typ
 from collections import deque
+
 import numpy as np
-import random
+import torch
+
 from model import CNN_QNet, QTrainer
 
 MAX_MEMORY = 100_000
@@ -13,10 +16,10 @@ class Agent:
         self._last_state = None
         self._last_move = None
         self._memory = deque(maxlen=MAX_MEMORY) # popleft()
-        self._model = CNN_QNet([11, 11, 3])
+        self._model = CNN_QNet([11, 11, 3], 4)
         self._trainer = QTrainer(self._model, lr=0.001, gamma=0.9)
 
-    def info() -> typ.Dict:
+    def info(self) -> typ.Dict:
         print('INFO')
 
         return {
@@ -34,18 +37,19 @@ class Agent:
     def move(self, game : typ.Dict) -> typ.Dict:
         print('MOVE')
         self._parse_game_coords_into_standard_coords(game)
+        
         current_state = self._get_state(game)
 
         if self._last_move is not None and self._last_state is not None: # We should learn
-            reward = self._get_reward(current_state)
-            self._train_short_memory(self._last_state, self._last_move, reward, current_state)
-            self._remember(self._last_state, self._last_move, reward, current_state)
+            reward = self._get_reward(game, current_state)
+            self._train_short_memory(self._last_state, self._last_move, reward, current_state, False)
+            self._remember(self._last_state, self._last_move, reward, current_state, False)
         
-        next_move = self._get_action()
+        next_move = self._get_action(current_state)
         self._last_state = current_state
         self._last_move = next_move
 
-        return {'move': next_move}
+        return {'move': self._get_str_next_move(next_move)}
     
     def end(self, game : typ.Dict):
         print('END')
@@ -54,8 +58,8 @@ class Agent:
 
         if self._last_move is not None and self._last_state is not None: # We should learn
             reward = -10 #self._get_reward(current_state)
-            self._train_short_memory(self._last_state, self._last_move, reward, current_state)
-            self._remember(self._last_state, self._last_move, reward, current_state)
+            self._train_short_memory(self._last_state, self._last_move, reward, current_state, [True])
+            self._remember(self._last_state, self._last_move, reward, current_state, [True])
 
         self._train_long_memory()
 
@@ -106,13 +110,14 @@ class Agent:
         state = np.zeros((game['board']['height'], game['board']['width'], 3)) 
         
         # First channel will be our snake body
-        our_snake = state['you']['body']
+        our_snake = game['you']['body']
 
         for segment in our_snake:
+            print(segment)
             state[segment['y'], segment['x'], 0] = 1
 
         # Second channel will be our snake head
-        our_snake_head = state['you']['body'][0]
+        our_snake_head = game['you']['body'][0]
         state[our_snake_head['y'], our_snake_head['x'], 1] = 1
 
         # Third channel will be our food
@@ -144,8 +149,44 @@ class Agent:
         
         return -1
     
-    def _get_action(self):
-        pass
+    def _get_action(self, state : np.ndarray) -> np.ndarray:
+        # random moves: tradeoff exploration / exploitation
+        self.epsilon = 80 - self._n_games
+        final_move = np.zeros(4)
+        if random.randint(0, 200) < self.epsilon:
+            move = random.randint(0, 3)
+            final_move[move] = 1
+        else:
+            state0 = torch.tensor(state, dtype=torch.float)
+            prediction = self._model(state0.cuda())
+            move = torch.argmax(prediction).item()
+            final_move[move] = 1
+
+        return final_move
+    
+    def _get_str_next_move(self, next_move : np.ndarray) -> str:
+        '''
+        Convert the next move into a string.
+
+        Parameters
+        ----------
+        next_move : np.ndarray
+            The next move.
+
+        Returns
+        -------
+        str
+            The next move as a string.
+        '''
+
+        if next_move[0] == 1:
+            return 'up'
+        elif next_move[1] == 1:
+            return 'down'
+        elif next_move[2] == 1:
+            return 'left'
+        else:
+            return 'right'
 
     def _remember(self, state : np.ndarray, action : int, reward : int, next_state : np.ndarray) -> None:
         '''
@@ -165,7 +206,7 @@ class Agent:
 
         self._memory.append((state, action, reward, next_state))
 
-    def _train_short_memory(self, state : np.ndarray, action : np.ndarray, reward : np.ndarray,  next_state : np.ndarray, done : np.ndarray):
+    def _train_short_memory(self, state : np.ndarray, action : np.ndarray, reward : typ.Union[int, np.ndarray],  next_state : np.ndarray, done : typ.Union[bool, np.ndarray]):
         self._trainer.train_step(state, action, reward, next_state, done)
 
     def _train_long_memory(self):
