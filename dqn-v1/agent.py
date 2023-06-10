@@ -2,6 +2,7 @@ import typing as typ
 from collections import deque
 import numpy as np
 import random
+from model import CNN_QNet, QTrainer
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
@@ -12,6 +13,8 @@ class Agent:
         self._last_state = None
         self._last_move = None
         self._memory = deque(maxlen=MAX_MEMORY) # popleft()
+        self._model = CNN_QNet([11, 11, 3])
+        self._trainer = QTrainer(self._model, lr=0.001, gamma=0.9)
 
     def info() -> typ.Dict:
         print('INFO')
@@ -162,8 +165,8 @@ class Agent:
 
         self._memory.append((state, action, reward, next_state))
 
-    def _train_short_memory(self, state : np.ndarray, action : int, reward : int, next_state : np.ndarray):
-        pass
+    def _train_short_memory(self, state : np.ndarray, action : np.ndarray, reward : np.ndarray,  next_state : np.ndarray, done : np.ndarray):
+        self._trainer.train_step(state, action, reward, next_state, done)
 
     def _train_long_memory(self):
         if len(self._memory) > BATCH_SIZE:
