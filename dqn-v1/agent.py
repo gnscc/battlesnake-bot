@@ -113,7 +113,6 @@ class Agent:
         our_snake = game['you']['body']
 
         for segment in our_snake:
-            print(segment)
             state[segment['y'], segment['x'], 0] = 1
 
         # Second channel will be our snake head
@@ -158,7 +157,8 @@ class Agent:
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self._model(state0.cuda())
+            state0 = state0.unsqueeze(0)
+            prediction = self._model(state0)
             move = torch.argmax(prediction).item()
             final_move[move] = 1
 

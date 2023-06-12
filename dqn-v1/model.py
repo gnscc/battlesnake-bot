@@ -16,6 +16,7 @@ class CNN_QNet(torch.nn.Module):
         self.fc2 = torch.nn.Linear(512, n_classes)
 
     def forward(self, x):
+        print('Forward:', x.shape)
         x = torch.nn.functional.relu(self.conv1(x))
         x = torch.nn.functional.relu(self.conv2(x))
         x = torch.nn.functional.relu(self.conv3(x))
@@ -45,6 +46,7 @@ class QTrainer:
         reward = torch.tensor(reward, dtype=torch.float)
         done = torch.tensor(done, dtype=torch.bool)
         # # (n, x)
+        print('Preprocess:', state.shape)
 
         if len(state.shape) == 3:
             # (1, x)
@@ -54,14 +56,16 @@ class QTrainer:
             reward = torch.unsqueeze(reward, 0)
             done = torch.unsqueeze(done, 0)
 
+        print('Postprocess:', state.shape)
+
         # 1: predicted Q values with current state
-        pred = self.model(state.cuda())
+        pred = self.model(state)
 
         target = pred.clone()
         for idx in range(len(done)):
             Q_new = reward[idx]
             if not done[idx]:
-                Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx].cuda()))
+                Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
             target[idx][torch.argmax(action).item()] = Q_new
 
         # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
